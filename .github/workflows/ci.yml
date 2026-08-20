@@ -36,6 +36,7 @@ jobs:
       - name: Pakete und Datenbank prüfen
         run: |
           node --check app/app.js
+          node tools/verify-versions.mjs
           node tools/verify-installer.mjs
           node tools/verify-updater.mjs
           python3 tools/verify-schema.py

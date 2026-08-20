@@ -2,6 +2,16 @@
 
 Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Datei dokumentiert. Die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## [2.3.0] – 2026-08-20
+
+### Hinzugefügt
+
+- Admin-Schaltfläche **Update vorbereiten** ohne FTP-Upload
+- Serverseitiger Download ausschließlich aus dem konfigurierten GitHub-Release-Kanal
+- Prüfung von HTTPS-Ziel, Downloadgröße, GitHub-SHA-256 und interner Updater-Version
+- Atomisches Ablegen von `updater.php` mit Wiederherstellung einer vorhandenen Datei bei Fehlern
+- Manueller Download bleibt als Ausweichweg verfügbar
+
 ## [2.2.0] – 2026-08-20
 
 ### Hinzugefügt
@@ -56,6 +66,7 @@ Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Date
 
 - Erster lokaler Oberflächenprototyp für die Bauteilverwaltung
 
+[2.3.0]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.0
 [2.2.0]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.2.0
 [2.1.2]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/compare/v2.1.0...v2.1.1

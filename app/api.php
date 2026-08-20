@@ -76,6 +76,96 @@ function a12GithubRequest(string $repository): array
     return ['status' => $status, 'body' => (string)$body];
 }
 
+function a12ValidateUpdaterUrl(string $url, string $repository): void
+{
+    $parts = parse_url($url);
+    $path = (string)($parts['path'] ?? '');
+    $pattern = '~^/' . preg_quote($repository, '~') . '/releases/download/[^/]+/updater\.php$~i';
+    if (($parts['scheme'] ?? '') !== 'https' || strtolower((string)($parts['host'] ?? '')) !== 'github.com'
+        || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
+        || !preg_match($pattern, $path)) {
+        throw new DomainException('Das Release enthält keine zulässige Updater-Adresse.');
+    }
+}
+
+function a12ValidateGithubDownloadHost(string $url): void
+{
+    $parts = parse_url($url);
+    $host = strtolower((string)($parts['host'] ?? ''));
+    $allowedHosts = ['github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com'];
+    if (($parts['scheme'] ?? '') !== 'https' || !in_array($host, $allowedHosts, true)) {
+        throw new DomainException('GitHub hat auf eine unerwartete Download-Adresse weitergeleitet.');
+    }
+}
+
+function a12DownloadUpdater(string $url): string
+{
+    $maximumBytes = 5 * 1024 * 1024;
+    if (function_exists('curl_init')) {
+        $body = '';
+        $tooLarge = false;
+        $handle = curl_init($url);
+        curl_setopt_array($handle, [
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_HTTPHEADER => ['Accept: application/octet-stream'],
+            CURLOPT_USERAGENT => 'A12-Teilchenbeschleuniger/' . A12_APP_VERSION,
+            CURLOPT_WRITEFUNCTION => static function ($unused, string $chunk) use (&$body, &$tooLarge, $maximumBytes): int {
+                if (strlen($body) + strlen($chunk) > $maximumBytes) {
+                    $tooLarge = true;
+                    return 0;
+                }
+                $body .= $chunk;
+                return strlen($chunk);
+            },
+        ]);
+        $okay = curl_exec($handle);
+        $status = (int)curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+        $finalUrl = (string)curl_getinfo($handle, CURLINFO_EFFECTIVE_URL);
+        $error = curl_error($handle);
+        curl_close($handle);
+        if ($tooLarge) {
+            throw new DomainException('Der Updater überschreitet die zulässige Größe von 5 MB.');
+        }
+        if ($okay === false || $status !== 200) {
+            throw new DomainException('Der Updater konnte nicht von GitHub geladen werden' . ($error !== '' ? ': ' . $error : '.'));
+        }
+        a12ValidateGithubDownloadHost($finalUrl);
+        return $body;
+    }
+
+    if (!filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
+        throw new DomainException('Für den direkten Download wird cURL oder allow_url_fopen benötigt.');
+    }
+    $context = stream_context_create(['http' => [
+        'method' => 'GET',
+        'header' => "Accept: application/octet-stream\r\nUser-Agent: A12-Teilchenbeschleuniger/" . A12_APP_VERSION,
+        'timeout' => 30,
+        'follow_location' => 1,
+        'max_redirects' => 5,
+        'ignore_errors' => true,
+    ]]);
+    $body = @file_get_contents($url, false, $context, 0, $maximumBytes + 1);
+    $headers = $http_response_header ?? [];
+    $lastStatus = 0;
+    foreach ($headers as $header) {
+        if (preg_match('~^HTTP/\S+\s+(\d{3})~i', $header, $match)) {
+            $lastStatus = (int)$match[1];
+        }
+    }
+    if ($body === false || $lastStatus !== 200) {
+        throw new DomainException('Der Updater konnte nicht von GitHub geladen werden.');
+    }
+    if (strlen($body) > $maximumBytes) {
+        throw new DomainException('Der Updater überschreitet die zulässige Größe von 5 MB.');
+    }
+    return $body;
+}
+
 /** @return array<string,mixed> */
 function a12CheckForUpdates(bool $force): array
 {
@@ -104,6 +194,7 @@ function a12CheckForUpdates(bool $force): array
                 'publishedAt' => null,
                 'updaterUrl' => null,
                 'updaterDigest' => null,
+                'updaterSize' => null,
                 'checkedAt' => gmdate('c'),
                 'cached' => false,
             ];
@@ -131,6 +222,7 @@ function a12CheckForUpdates(bool $force): array
                 'publishedAt' => $release['published_at'] ?? null,
                 'updaterUrl' => $updater['browser_download_url'] ?? null,
                 'updaterDigest' => $updater['digest'] ?? null,
+                'updaterSize' => isset($updater['size']) ? (int)$updater['size'] : null,
                 'checkedAt' => gmdate('c'),
                 'cached' => false,
             ];
@@ -158,6 +250,66 @@ function a12CheckForUpdates(bool $force): array
     }
 }
 
+/** @return array{url:string,version:string,sha256:string} */
+function a12PrepareUpdate(): array
+{
+    $status = a12CheckForUpdates(true);
+    if (!empty($status['error']) && empty($status['latestVersion'])) {
+        throw new DomainException('Die aktuelle Release-Information konnte nicht geladen werden.');
+    }
+    if (empty($status['updateAvailable'])) {
+        throw new DomainException('Diese Installation verwendet bereits die aktuelle Version.');
+    }
+
+    $repository = (string)($status['repository'] ?? '');
+    $url = (string)($status['updaterUrl'] ?? '');
+    $version = (string)($status['latestVersion'] ?? '');
+    $digest = strtolower((string)($status['updaterDigest'] ?? ''));
+    a12ValidateUpdaterUrl($url, $repository);
+    if (!preg_match('/^sha256:([a-f0-9]{64})$/', $digest, $digestMatch)) {
+        throw new DomainException('GitHub liefert für diesen Updater keine gültige SHA-256-Prüfsumme.');
+    }
+    if (!is_writable(__DIR__)) {
+        throw new DomainException('Der A12-Webordner ist für PHP nicht beschreibbar. Bitte verwenden Sie den manuellen Download.');
+    }
+
+    $contents = a12DownloadUpdater($url);
+    $actualDigest = hash('sha256', $contents);
+    if (!hash_equals($digestMatch[1], $actualDigest)) {
+        throw new DomainException('Die SHA-256-Prüfung des heruntergeladenen Updaters ist fehlgeschlagen.');
+    }
+    if (!preg_match("/const A12_UPDATER_VERSION = '([^']+)';/", $contents, $versionMatch)
+        || !hash_equals($version, (string)$versionMatch[1])) {
+        throw new DomainException('Die Versionsnummer im Updater stimmt nicht mit dem GitHub-Release überein.');
+    }
+
+    $destination = __DIR__ . DIRECTORY_SEPARATOR . 'updater.php';
+    $temporary = __DIR__ . DIRECTORY_SEPARATOR . '.a12-updater-download-' . bin2hex(random_bytes(6)) . '.php';
+    if (@file_put_contents($temporary, $contents, LOCK_EX) === false) {
+        throw new DomainException('Der geprüfte Updater konnte nicht im Webordner gespeichert werden.');
+    }
+    @chmod($temporary, 0644);
+    $backup = null;
+    if (is_file($destination)) {
+        $backup = __DIR__ . DIRECTORY_SEPARATOR . '.a12-updater-backup-' . bin2hex(random_bytes(5)) . '.php';
+        if (!@rename($destination, $backup)) {
+            @unlink($temporary);
+            throw new DomainException('Eine vorhandene updater.php konnte nicht ersetzt werden.');
+        }
+    }
+    if (!@rename($temporary, $destination)) {
+        @unlink($temporary);
+        if ($backup !== null) {
+            @rename($backup, $destination);
+        }
+        throw new DomainException('Der geprüfte Updater konnte nicht aktiviert werden.');
+    }
+    if ($backup !== null) {
+        @unlink($backup);
+    }
+    return ['url' => 'updater.php', 'version' => $version, 'sha256' => $actualDigest];
+}
+
 try {
     if ($action === 'snapshot' && $method === 'GET') {
         a12Json(a12SnapshotForCurrentUser());
@@ -166,6 +318,12 @@ try {
     if ($action === 'update-status' && $method === 'GET') {
         a12RequireAnyRole(['admin']);
         a12Json(a12CheckForUpdates(isset($_GET['force']) && $_GET['force'] === '1'));
+    }
+
+    if ($action === 'prepare-update' && $method === 'POST') {
+        a12RequireAnyRole(['admin']);
+        a12RequireCsrf();
+        a12Json(a12PrepareUpdate());
     }
 
     if ($action === 'export' && $method === 'GET') {

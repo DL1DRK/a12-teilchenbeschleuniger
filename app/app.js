@@ -150,6 +150,7 @@ function renderUpdateStatus(status){
   $('#updateChecked').textContent=`Zuletzt geprüft: ${checked}${status.cached?' · Cache':''}`;
   $('#releaseNotes').hidden=true;
   $('#updateActions').hidden=true;
+  $('#prepareUpdateBtn').hidden=true;
   $('#updateBanner').hidden=true;
   $('#updateDot').hidden=true;
 
@@ -171,7 +172,8 @@ function renderUpdateStatus(status){
   const updaterUrl=safeGithubUrl(status.updaterUrl);
   if(releaseUrl){$('#releaseLink').href=releaseUrl;$('#releaseLink').hidden=false}else{$('#releaseLink').hidden=true}
   if(updaterUrl){$('#updaterLink').href=updaterUrl;$('#updaterLink').hidden=false}else{$('#updaterLink').hidden=true}
-  $('#updateActions').hidden=!(releaseUrl||updaterUrl);
+  $('#prepareUpdateBtn').hidden=!(status.updateAvailable&&updaterUrl);
+  $('#updateActions').hidden=!(releaseUrl||updaterUrl||status.updateAvailable);
   if(status.updateAvailable){
     $('#updateBannerText').textContent=`Version ${status.latestVersion} kann installiert werden.`;
     $('#updateBanner').hidden=false;
@@ -186,6 +188,23 @@ async function checkUpdates(force=false){
   try{renderUpdateStatus(await request('update-status',{query:force?{force:'1'}:{}}))}
   catch(error){renderUpdateStatus({currentVersion:'',error:error.message,checkedAt:new Date().toISOString()})}
   finally{if(button)button.disabled=false}
+}
+
+async function prepareUpdate(){
+  const button=$('#prepareUpdateBtn');
+  if(!button)return;
+  const label=button.textContent;
+  button.disabled=true;
+  button.textContent='Updater wird geprüft …';
+  try{
+    const prepared=await request('prepare-update',{method:'POST',body:{}});
+    toast(`Updater ${prepared.version} ist bereit`);
+    location.href=prepared.url;
+  }catch(error){
+    toast(error.message,true);
+    button.disabled=false;
+    button.textContent=label;
+  }
 }
 
 $$('.nav').forEach(nav=>nav.addEventListener('click',()=>{
@@ -227,6 +246,7 @@ if($('#usersBody'))$('#usersBody').addEventListener('click',event=>{
 });
 if($('#userForm'))$('#userForm').elements.role.addEventListener('change',updateRoleInfo);
 if($('#checkUpdateBtn'))$('#checkUpdateBtn').addEventListener('click',()=>checkUpdates(true));
+if($('#prepareUpdateBtn'))$('#prepareUpdateBtn').addEventListener('click',prepareUpdate);
 if($('[data-open-system]'))$('[data-open-system]').addEventListener('click',()=>document.querySelector('.nav[data-view="system"]').click());
 
 $('#partForm').addEventListener('submit',async event=>{

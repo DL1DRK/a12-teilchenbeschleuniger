@@ -5,6 +5,7 @@
 # Lokale Installationen und Daten
 /config.php
 /.a12-*.lock
+/.a12-updater-*.php
 /*.sqlite
 /*.sqlite-*
 /a12-data-*/

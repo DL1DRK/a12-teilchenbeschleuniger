@@ -11,6 +11,7 @@ Vor einem Beitrag bitte ausführen:
 ```powershell
 node .\tools\build-installer.mjs
 node .\tools\build-updater.mjs
+node .\tools\verify-versions.mjs
 node .\tools\verify-installer.mjs
 node .\tools\verify-updater.mjs
 python .\tools\verify-schema.py

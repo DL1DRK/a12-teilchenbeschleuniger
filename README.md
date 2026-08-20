@@ -48,14 +48,14 @@ Administratoren verwalten Konten nach der Anmeldung unter **Benutzer**. Der letz
 
 ## Updates
 
-Die Anwendung prüft für Administratoren höchstens alle sechs Stunden das neueste GitHub-Release. Ist eine neuere Version vorhanden, erscheint ein Hinweis im Kopfbereich und unter **System → GitHub Updates** ein Download-Link.
+Die Anwendung prüft für Administratoren höchstens alle sechs Stunden das neueste GitHub-Release. Ist eine neuere Version vorhanden, erscheint ein Hinweis im Kopfbereich und unter **System → GitHub Updates** die Schaltfläche **Update vorbereiten**.
 
 1. Als Administrator anmelden.
-2. Den angebotenen `updater.php` herunterladen.
-3. Die Datei in denselben Webordner wie `index.php` und `config.php` laden.
-4. `https://a12.example.org/updater.php` öffnen und **Update installieren** wählen.
+2. Unter **System** auf **Update vorbereiten** klicken.
+3. A12 lädt `updater.php` direkt aus dem offiziellen GitHub-Release, begrenzt die Downloadgröße und prüft SHA-256 sowie Versionsnummer.
+4. Auf der anschließend geöffneten Seite **Update installieren** wählen.
 
-Der Updater migriert die SQLite-Datenbank transaktional und ersetzt nur Anwendungsdateien. Bauteile, Bestände, Bewegungen, Benutzer und Passwort-Hashes bleiben erhalten. Vor jedem Update empfiehlt sich trotzdem eine Sicherung der SQLite-Datei.
+Ist der Webordner für PHP nicht beschreibbar oder blockiert das Hosting den Download, bleibt **Manuell herunterladen** als Ausweichweg erhalten. Der Updater migriert die SQLite-Datenbank transaktional und ersetzt nur Anwendungsdateien. Bauteile, Bestände, Bewegungen, Benutzer und Passwort-Hashes bleiben erhalten. Vor jedem Update empfiehlt sich trotzdem eine Sicherung der SQLite-Datei.
 
 ## Datensicherung und Sicherheit
 
@@ -72,6 +72,7 @@ Die auszuliefernde Anwendung liegt in `app/`. Die beiden Einzeldateien werden da
 ```powershell
 node .\tools\build-installer.mjs
 node .\tools\build-updater.mjs
+node .\tools\verify-versions.mjs
 node .\tools\verify-installer.mjs
 node .\tools\verify-updater.mjs
 python .\tools\verify-schema.py
