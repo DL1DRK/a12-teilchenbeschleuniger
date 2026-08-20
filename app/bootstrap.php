@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const A12_APP_VERSION = '2.3.2';
+const A12_APP_VERSION = '2.3.3';
 
 $configFile = __DIR__ . DIRECTORY_SEPARATOR . 'config.php';
 if (!is_file($configFile)) {
@@ -13,7 +13,7 @@ if (!is_file($configFile)) {
 $a12Config = require $configFile;
 if (!is_array($a12Config) || empty($a12Config['database']) || empty($a12Config['session_name'])) {
     http_response_code(500);
-    exit('Die A12-Konfiguration ist ungültig.');
+    exit('Die Konfiguration von A12-Teilchenbeschleuniger ist ungültig.');
 }
 
 final class A12NotFoundException extends Exception {}

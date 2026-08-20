@@ -23,7 +23,7 @@ Eine schlanke, selbst gehostete Bauteil- und Lagerbestandsverwaltung für den Ap
 2. Die Datei per FTP/SFTP in das gewünschte Webverzeichnis laden.
 3. Die Datei im Browser öffnen, zum Beispiel `https://a12.example.org/installer.php`.
 4. Installationsordner, Administratorname und ein Passwort mit mindestens zehn Zeichen eintragen.
-5. **A12 installieren** wählen und über den angezeigten Link anmelden.
+5. **A12-Teilchenbeschleuniger installieren** wählen und über den angezeigten Link anmelden.
 
 Der Installer enthält alle Laufzeitdateien und lädt während der Installation nichts nach. Er legt die gemeinsame SQLite-Datenbank möglichst außerhalb des öffentlichen Webordners ab. Ist das beim Hosting nicht möglich, wird ein zufällig benannter, zusätzlich geschützter Datenordner verwendet.
 
@@ -52,7 +52,7 @@ Die Anwendung prüft für Administratoren höchstens alle sechs Stunden das neue
 
 1. Als Administrator anmelden.
 2. Unter **System** auf **Update vorbereiten** klicken.
-3. A12 lädt `updater.php` direkt aus dem offiziellen GitHub-Release, begrenzt die Downloadgröße und prüft SHA-256 sowie Versionsnummer.
+3. A12-Teilchenbeschleuniger lädt `updater.php` direkt aus dem offiziellen GitHub-Release, begrenzt die Downloadgröße und prüft SHA-256 sowie Versionsnummer.
 4. Auf der anschließend geöffneten Seite **Update installieren** wählen.
 
 Ist der Webordner für PHP nicht beschreibbar oder blockiert das Hosting den Download, bleibt **Manuell herunterladen** als Ausweichweg erhalten. Der Updater migriert die SQLite-Datenbank transaktional und ersetzt nur Anwendungsdateien. Bauteile, Bestände, Bewegungen, Benutzer und Passwort-Hashes bleiben erhalten. Vor jedem Update empfiehlt sich trotzdem eine Sicherung der SQLite-Datei.

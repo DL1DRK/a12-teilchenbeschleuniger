@@ -8,6 +8,13 @@
   --shadow: 0 18px 50px #007e9d24;
 }
 [hidden] { display: none !important; }
+.brand b.brandName {
+  display: block;
+  max-width: 145px;
+  font-size: 16px;
+  line-height: 1.15;
+  letter-spacing: .025em;
+}
 
 .primary { box-shadow: 0 6px 20px #007e9d30; }
 .drawer,

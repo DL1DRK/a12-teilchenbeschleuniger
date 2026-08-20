@@ -91,7 +91,7 @@ endif;
 </head>
 <body>
   <aside class="sidebar">
-    <div class="brand"><img src="logo.png" alt="A12-Teilchenbeschleuniger"><div><b>A12</b><span>TEILCHEN<br>BESCHLEUNIGER</span></div></div>
+    <div class="brand"><img src="logo.png" alt="A12-Teilchenbeschleuniger"><div><b class="brandName">A12-Teilchen<wbr>beschleuniger</b></div></div>
     <nav>
       <button class="nav active" data-view="inventory">▦ <span>Bauteile</span></button>
       <button class="nav" data-view="drawers">▤ <span>Schubladen</span></button>
@@ -106,7 +106,7 @@ endif;
   <main>
     <header><div><p class="eyebrow">A12-TEILCHENBESCHLEUNIGER</p><h1 id="viewTitle">Bauteile</h1></div><div class="headerActions"><button class="themeToggle" id="themeToggle" type="button" aria-label="Dark-Mode einschalten" title="Darstellung wechseln"><span id="themeIcon">☾</span><span id="themeLabel">Dark-Mode</span></button><button class="logoutButton" type="submit" form="logoutForm" title="Abmelden">↪ <span>Abmelden</span></button><button class="primary" id="addBtn" <?= a12HasAnyRole(['admin', 'storekeeper']) ? '' : 'hidden' ?>>＋ Bauteil einlagern</button><button class="primary" id="addUserBtn" hidden>＋ Benutzer anlegen</button></div></header>
     <form method="post" id="logoutForm"><input type="hidden" name="csrf" value="<?= htmlspecialchars(a12CsrfToken(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="logout" value="1"></form>
-    <?php if (a12CurrentRole() === 'admin'): ?><div class="updateBanner" id="updateBanner" hidden><div><strong>Eine neue A12-Version ist verfügbar.</strong><span id="updateBannerText"></span></div><button type="button" data-open-system>Details ansehen</button></div><?php endif; ?>
+    <?php if (a12CurrentRole() === 'admin'): ?><div class="updateBanner" id="updateBanner" hidden><div><strong>Eine neue Version von A12-Teilchenbeschleuniger ist verfügbar.</strong><span id="updateBannerText"></span></div><button type="button" data-open-system>Details ansehen</button></div><?php endif; ?>
 
     <section id="inventory" class="view active">
       <div class="stats">

@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-const A12_UPDATER_VERSION = '2.3.2';
+const A12_UPDATER_VERSION = '2.3.3';
 const A12_UPDATE_PAYLOAD = '__A12_UPDATE_PAYLOAD_BASE64__';
 
 if (!is_file(__DIR__ . DIRECTORY_SEPARATOR . 'config.php') || !is_file(__DIR__ . DIRECTORY_SEPARATOR . 'bootstrap.php')) {
     http_response_code(409);
-    exit('Dieser Updater muss direkt in den Ordner einer bestehenden A12-Installation geladen werden.');
+    exit('Dieser Updater muss direkt in den Ordner einer bestehenden Installation von A12-Teilchenbeschleuniger geladen werden.');
 }
 
 require __DIR__ . DIRECTORY_SEPARATOR . 'bootstrap.php';
@@ -17,7 +17,7 @@ header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; 
 
 if (!a12IsAuthenticated() || (string)($_SESSION['role'] ?? '') !== 'admin') {
     http_response_code(403);
-    exit('Bitte zuerst als Administrator bei A12 anmelden und den Updater anschließend erneut öffnen.');
+    exit('Bitte zuerst als Administrator bei A12-Teilchenbeschleuniger anmelden und den Updater anschließend erneut öffnen.');
 }
 
 $lockFile = __DIR__ . DIRECTORY_SEPARATOR . '.a12-updater-' . A12_UPDATER_VERSION . '.lock';
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $selfDeleted = @unlink(__FILE__);
             }
         } catch (Throwable $exception) {
-            error_log('A12 updater error: ' . $exception->getMessage());
+            error_log('A12-Teilchenbeschleuniger updater error: ' . $exception->getMessage());
             $errors[] = 'Das Update konnte nicht abgeschlossen werden: ' . $exception->getMessage();
         }
     }
@@ -179,9 +179,9 @@ $isLocked = is_file($lockFile) && !$success;
     <p class="intro">Aktualisiert Anwendung und Datenbank. Bauteile, Bestände, Benutzer und Passwörter bleiben erhalten.</p>
     <?php if ($success): ?>
       <div class="success"><strong>Update abgeschlossen.</strong><br><?= $selfDeleted ? 'Der Updater wurde gelöscht.' : 'Der Updater wurde gesperrt und sollte manuell gelöscht werden.' ?></div>
-      <div class="actions"><a class="button" href="./">A12 öffnen →</a></div>
+      <div class="actions"><a class="button" href="./">A12-Teilchenbeschleuniger öffnen →</a></div>
     <?php elseif ($isLocked): ?>
-      <div class="notice">Dieser Updater wurde bereits ausgeführt. Öffne die Anwendung über <a href="./">A12</a>.</div>
+      <div class="notice">Dieser Updater wurde bereits ausgeführt. Öffne die Anwendung über <a href="./">A12-Teilchenbeschleuniger</a>.</div>
     <?php else: ?>
       <?php foreach ($errors as $error): ?><div class="error"><?= updaterH($error) ?></div><?php endforeach; ?>
       <ul class="checks"><?php foreach ($requirements as [$label,$okay]): ?><li class="<?= $okay ? 'ok' : 'no' ?>"><?= $okay ? '✓' : '✕' ?> <?= updaterH($label) ?></li><?php endforeach; ?></ul>

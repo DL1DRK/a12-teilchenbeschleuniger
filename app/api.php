@@ -270,7 +270,7 @@ function a12PrepareUpdate(): array
         throw new DomainException('GitHub liefert für diesen Updater keine gültige SHA-256-Prüfsumme.');
     }
     if (!is_writable(__DIR__)) {
-        throw new DomainException('Der A12-Webordner ist für PHP nicht beschreibbar. Bitte verwenden Sie den manuellen Download.');
+        throw new DomainException('Der Webordner von A12-Teilchenbeschleuniger ist für PHP nicht beschreibbar. Bitte verwenden Sie den manuellen Download.');
     }
 
     $contents = a12DownloadUpdater($url);
@@ -498,6 +498,6 @@ try {
 } catch (A12NotFoundException $exception) {
     a12Json(['error' => $exception->getMessage()], 404);
 } catch (Throwable $exception) {
-    error_log('A12 API error: ' . $exception->getMessage());
+    error_log('A12-Teilchenbeschleuniger API error: ' . $exception->getMessage());
     a12Json(['error' => 'Der Server konnte die Anfrage nicht verarbeiten.'], 500);
 }

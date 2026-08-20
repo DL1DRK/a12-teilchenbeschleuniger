@@ -165,7 +165,7 @@ function renderUpdateStatus(status){
     return;
   }
 
-  $('#updateHeadline').textContent=status.updateAvailable?`Version ${status.latestVersion} verfügbar`:'A12 ist aktuell';
+  $('#updateHeadline').textContent=status.updateAvailable?`Version ${status.latestVersion} verfügbar`:'A12-Teilchenbeschleuniger ist aktuell';
   $('#updateMessage').textContent=status.updateAvailable?`Installiert ist Version ${status.currentVersion}.`:`Installierte Version ${status.currentVersion} entspricht dem aktuellen Release.`;
   if(status.releaseNotes){$('#releaseNotes').textContent=status.releaseNotes;$('#releaseNotes').hidden=false}
   const releaseUrl=safeGithubUrl(status.releaseUrl);
