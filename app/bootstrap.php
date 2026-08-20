@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const A12_APP_VERSION = '2.3.1';
+const A12_APP_VERSION = '2.3.2';
 
 $configFile = __DIR__ . DIRECTORY_SEPARATOR . 'config.php';
 if (!is_file($configFile)) {

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const A12_UPDATER_VERSION = '2.3.1';
+const A12_UPDATER_VERSION = '2.3.2';
 const A12_UPDATE_PAYLOAD = '__A12_UPDATE_PAYLOAD_BASE64__';
 
 if (!is_file(__DIR__ . DIRECTORY_SEPARATOR . 'config.php') || !is_file(__DIR__ . DIRECTORY_SEPARATOR . 'bootstrap.php')) {

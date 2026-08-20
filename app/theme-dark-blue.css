@@ -79,6 +79,7 @@ dialog::backdrop { background: #063943bd; }
 .releaseNotes { max-height: 180px; margin: 15px 0; padding: 12px; overflow: auto; border-left: 3px solid #00acd3; background: #00acd309; color: var(--muted); white-space: pre-wrap; font-size: 13px; }
 .updateMeta { display: flex; justify-content: space-between; gap: 14px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .updateMeta a { color: #007f9e; text-decoration: none; font-weight: 750; }
+.updateLinks { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 14px; }
 .updateActions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 17px; }
 .updateHint { display: block; margin-top: 10px; color: var(--muted); }
 .secondaryButton { display: inline-flex; align-items: center; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); text-decoration: none; font-weight: 750; }
