@@ -78,7 +78,7 @@ python .\tools\verify-schema.py
 python .\tools\verify-migration.py
 ```
 
-Ein Tag im Format `vX.Y.Z` startet den Release-Workflow. Er prüft das Projekt, baut `installer.php` und `updater.php` und hängt beide Dateien an ein GitHub-Release. Details stehen in [CONTRIBUTING.md](CONTRIBUTING.md) und [CHANGELOG.md](CHANGELOG.md).
+Eine neue Versionsnummer auf `main` startet den Release-Workflow. Er prüft das Projekt, erstellt den passenden Tag, baut `installer.php` und `updater.php` und hängt beide Dateien an ein GitHub-Release. Existiert das Release bereits, bleibt ein normaler Commit ohne neue Veröffentlichung. Details stehen in [CONTRIBUTING.md](CONTRIBUTING.md) und [CHANGELOG.md](CHANGELOG.md).
 
 ## Lizenz
 

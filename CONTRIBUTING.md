@@ -29,4 +29,4 @@ PHP- und JavaScript-Dateien sollten zusätzlich syntaktisch geprüft werden. Der
 
 ## Releases
 
-Ein Maintainer setzt nach bestandener CI einen Tag `vX.Y.Z`. Der Release-Workflow baut daraufhin die beiden Einzeldateien und veröffentlicht sie als Release-Anhänge. Die Anwendung wertet ausschließlich das jeweils neueste GitHub-Release aus.
+Ein Maintainer erhöht nach bestandener CI die Version und führt die Änderung nach `main`. Der Release-Workflow erstellt den Tag `vX.Y.Z`, baut die beiden Einzeldateien und veröffentlicht sie als Release-Anhänge. Die Anwendung wertet ausschließlich das jeweils neueste GitHub-Release aus.

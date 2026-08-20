@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,26 +14,41 @@ jobs:
     steps:
       - name: Repository auschecken
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Release-Stand prüfen
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v$(tr -d '\r\n' < VERSION)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG existiert bereits."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Node.js einrichten
+        if: steps.version.outputs.publish == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: PHP einrichten
+        if: steps.version.outputs.publish == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
           extensions: pdo_sqlite
           coverage: none
 
-      - name: Version abgleichen
-        shell: bash
-        run: |
-          test "${GITHUB_REF_NAME#v}" = "$(tr -d '\r\n' < VERSION)"
-
       - name: Bauen und prüfen
+        if: steps.version.outputs.publish == 'true'
         run: |
           node tools/build-installer.mjs
           node tools/build-updater.mjs
@@ -45,11 +60,16 @@ jobs:
           find app tools -name '*.php' -print0 | xargs -0 -n1 php -l
 
       - name: GitHub Release veröffentlichen
+        if: steps.version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "$GITHUB_REF_NAME"
-          installer.php updater.php
-          --verify-tag
-          --generate-notes
-          --title "A12-Teilchenbeschleuniger ${GITHUB_REF_NAME}"
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" -m "A12-Teilchenbeschleuniger $RELEASE_TAG"
+          git push origin "$RELEASE_TAG"
+          gh release create "$RELEASE_TAG" installer.php updater.php \
+            --verify-tag \
+            --generate-notes \
+            --title "A12-Teilchenbeschleuniger $RELEASE_TAG"
