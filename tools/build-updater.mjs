@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const files = ['index.php', 'bootstrap.php', 'api.php', 'style.css', 'theme-dark-blue.css', 'app.js'];
+const files = ['index.php', 'bootstrap.php', 'api.php', 'style.css', 'theme-dark-blue.css', 'app.js', 'favicon.png'];
 const payload = {};
 
 for (const name of files) {
@@ -23,4 +23,3 @@ const output = template.replace('__A12_UPDATE_PAYLOAD_BASE64__', encodedPayload)
 if (output === template) throw new Error('Updater payload placeholder was not found.');
 await writeFile(join(root, 'updater.php'), output);
 console.log(`updater.php created (${Buffer.byteLength(output).toLocaleString('de-DE')} bytes)`);
-

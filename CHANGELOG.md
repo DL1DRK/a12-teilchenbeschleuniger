@@ -2,6 +2,12 @@
 
 Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Datei dokumentiert. Die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## [2.3.1] – 2026-08-20
+
+### Hinzugefügt
+
+- Kompaktes Favicon aus dem runden A12-Logo für Browser-Tabs und Startbildschirm-Verknüpfungen
+
 ## [2.3.0] – 2026-08-20
 
 ### Hinzugefügt
@@ -66,6 +72,7 @@ Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Date
 
 - Erster lokaler Oberflächenprototyp für die Bauteilverwaltung
 
+[2.3.1]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.1
 [2.3.0]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.0
 [2.2.0]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.2.0
 [2.1.2]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/compare/v2.1.1...v2.1.2

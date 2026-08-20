@@ -84,6 +84,8 @@ endif;
   <meta name="a12-role" content="<?= htmlspecialchars(a12CurrentRole(), ENT_QUOTES, 'UTF-8') ?>">
   <meta name="a12-user-id" content="<?= (int)$_SESSION['user_id'] ?>">
   <title>A12-Teilchenbeschleuniger · Bauteile</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="theme-dark-blue.css">
 </head>

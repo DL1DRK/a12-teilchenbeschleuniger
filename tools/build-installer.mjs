@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const files = ['index.php', 'bootstrap.php', 'api.php', 'style.css', 'theme-dark-blue.css', 'app.js', 'logo.png'];
+const files = ['index.php', 'bootstrap.php', 'api.php', 'style.css', 'theme-dark-blue.css', 'app.js', 'logo.png', 'favicon.png'];
 const payload = {};
 
 for (const name of files) {
