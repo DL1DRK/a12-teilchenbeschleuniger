@@ -1,0 +1,24 @@
+name: Funktionswunsch
+description: Eine Verbesserung für A12 vorschlagen
+title: "[Wunsch] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Ausgangssituation
+      description: Welches Problem soll die Funktion lösen?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Vorschlag
+      description: Wie sollte sich A12 idealerweise verhalten?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Welche anderen Lösungen wurden bereits erwogen?

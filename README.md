@@ -83,4 +83,3 @@ Ein Tag im Format `vX.Y.Z` startet den Release-Workflow. Er prüft das Projekt, 
 ## Lizenz
 
 Für dieses Repository wurde noch keine Open-Source-Lizenz festgelegt. Ohne ausdrückliche Lizenz bleiben alle Rechte beim Rechteinhaber.
-

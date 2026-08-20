@@ -1,0 +1,45 @@
+name: Prüfung
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v7
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: PHP einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: pdo_sqlite
+          coverage: none
+
+      - name: Einzeldateien bauen
+        run: |
+          node tools/build-installer.mjs
+          node tools/build-updater.mjs
+
+      - name: Pakete und Datenbank prüfen
+        run: |
+          node --check app/app.js
+          node tools/verify-installer.mjs
+          node tools/verify-updater.mjs
+          python3 tools/verify-schema.py
+          python3 tools/verify-migration.py
+
+      - name: PHP-Syntax prüfen
+        run: find app tools -name '*.php' -print0 | xargs -0 -n1 php -l

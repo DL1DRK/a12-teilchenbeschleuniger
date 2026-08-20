@@ -1,0 +1,18 @@
+# Erzeugte Release-Dateien
+/installer.php
+/updater.php
+
+# Lokale Installationen und Daten
+/config.php
+/.a12-*.lock
+/*.sqlite
+/*.sqlite-*
+/a12-data-*/
+/storage/
+
+# Werkzeuge und Betriebssystem
+/node_modules/
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db

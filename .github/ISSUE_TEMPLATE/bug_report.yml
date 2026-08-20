@@ -1,0 +1,47 @@
+name: Fehlerbericht
+description: Einen reproduzierbaren Fehler in A12 melden
+title: "[Fehler] "
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: A12-Version
+      placeholder: z. B. 2.2.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Umgebung
+      placeholder: PHP-Version, Webserver, Browser
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Reproduzieren
+      description: Was muss nacheinander getan werden, damit der Fehler auftritt?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+    validations:
+      required: true
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Sicherheitsprüfung
+      options:
+        - label: Dieses Issue enthält keine Passwörter, Datenbanken, Tokens oder vertraulichen Daten.
+          required: true
+        - label: Es handelt sich nicht um eine Sicherheitslücke; dafür gilt SECURITY.md.
+          required: true
