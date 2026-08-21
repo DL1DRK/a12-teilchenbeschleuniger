@@ -40,6 +40,7 @@ jobs:
           node tools/verify-installer.mjs
           node tools/verify-updater.mjs
           node tools/verify-admin-maintenance.mjs
+          node tools/verify-request-transport.mjs
           python3 tools/verify-schema.py
           python3 tools/verify-migration.py
           python3 tools/verify-reset-database.py

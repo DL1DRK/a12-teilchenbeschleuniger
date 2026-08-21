@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const A12_INSTALLER_VERSION = '2.4.0';
+const A12_INSTALLER_VERSION = '2.4.1';
 const A12_PAYLOAD_BASE64 = '__A12_PAYLOAD_BASE64__';
 
 session_start();

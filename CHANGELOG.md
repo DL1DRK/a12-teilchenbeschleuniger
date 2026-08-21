@@ -2,6 +2,15 @@
 
 Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Datei dokumentiert. Die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## [2.4.1] - 2026-08-21
+
+### Behoben
+
+- Schreibende Anfragen verwenden klassische Formulardaten und funktionieren damit auch hinter restriktiven Shared-Hosting-Schutzfiltern
+- CSRF-Schutz wird ohne einen vom Webhoster möglicherweise entfernten Sonder-Header übertragen
+- SQLite-Transaktionen werden nach einem manuellen `BEGIN IMMEDIATE` treiberunabhängig abgeschlossen
+- Verständliche Fehlermeldungen für Datenbanksperren und fehlende Schreibrechte
+
 ## [2.4.0] - 2026-08-21
 
 ### Hinzugefügt
@@ -99,6 +108,7 @@ Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Date
 
 - Erster lokaler Oberflächenprototyp für die Bauteilverwaltung
 
+[2.4.1]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.4.1
 [2.4.0]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.4.0
 [2.3.3]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.3
 [2.3.2]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.2

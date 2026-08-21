@@ -16,20 +16,25 @@ const sheetUrl=part=>`https://www.google.com/search?q=${encodeURIComponent(`${pa
 
 async function request(action,{method='GET',body,query={}}={}){
   const options={method,credentials:'same-origin',headers:{Accept:'application/json'}};
-  if(body!==undefined){options.headers['Content-Type']='application/json';options.headers['X-CSRF-Token']=csrf;options.body=JSON.stringify(body)}
+  if(body!==undefined){
+    const fields=new URLSearchParams({_csrf:csrf});
+    Object.entries(body).forEach(([key,value])=>fields.set(key,typeof value==='boolean'?(value?'1':'0'):String(value??'')));
+    options.body=fields;
+  }
   const parameters=new URLSearchParams({action,...query});
   const response=await fetch(`api.php?${parameters}`,options);
   let payload;
-  try{payload=await response.json()}catch{payload={error:'Der Server hat eine ungültige Antwort geliefert.'}}
+  try{payload=await response.json()}catch{payload={error:response.status===403?'Der Webserver hat die Anfrage abgelehnt (HTTP 403).':'Der Server hat eine ungültige Antwort geliefert.'}}
   if(response.status===401){location.reload();throw new Error('Die Sitzung ist abgelaufen.')}
   if(!response.ok)throw new Error(payload.error||'Die Anfrage ist fehlgeschlagen.');
   return payload;
 }
 
 async function requestForm(action,formData){
-  const response=await fetch(`api.php?${new URLSearchParams({action})}`,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json','X-CSRF-Token':csrf},body:formData});
+  formData.set('_csrf',csrf);
+  const response=await fetch(`api.php?${new URLSearchParams({action})}`,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body:formData});
   let payload;
-  try{payload=await response.json()}catch{payload={error:'Der Server hat eine ungültige Antwort geliefert.'}}
+  try{payload=await response.json()}catch{payload={error:response.status===403?'Der Webserver hat die Anfrage abgelehnt (HTTP 403).':'Der Server hat eine ungültige Antwort geliefert.'}}
   if(response.status===401){location.reload();throw new Error('Die Sitzung ist abgelaufen.')}
   if(!response.ok)throw new Error(payload.error||'Die Anfrage ist fehlgeschlagen.');
   return payload;

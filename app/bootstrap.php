@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const A12_APP_VERSION = '2.4.0';
+const A12_APP_VERSION = '2.4.1';
 
 $configFile = __DIR__ . DIRECTORY_SEPARATOR . 'config.php';
 if (!is_file($configFile)) {
@@ -93,7 +93,7 @@ function a12RequireAnyRole(array $roles): void
 
 function a12RequireCsrf(): void
 {
-    $provided = (string)($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+    $provided = (string)($_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     if ($provided === '' || !hash_equals(a12CsrfToken(), $provided)) {
         a12Json(['error' => 'Ungültiges Sicherheitstoken. Bitte laden Sie die Seite neu.'], 419);
     }
@@ -109,10 +109,15 @@ function a12Json(array $data, int $status = 200): never
 }
 
 /** @return array<string,mixed> */
-function a12ReadJson(): array
+function a12ReadInput(): array
 {
     if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 65536) {
         a12Json(['error' => 'Die Anfrage ist zu groß.'], 413);
+    }
+    if ($_POST !== []) {
+        $input = $_POST;
+        unset($input['_csrf']);
+        return $input;
     }
     $decoded = json_decode((string)file_get_contents('php://input'), true);
     if (!is_array($decoded)) {

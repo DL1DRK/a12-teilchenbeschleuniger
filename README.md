@@ -82,6 +82,7 @@ node .\tools\verify-versions.mjs
 node .\tools\verify-installer.mjs
 node .\tools\verify-updater.mjs
 node .\tools\verify-admin-maintenance.mjs
+node .\tools\verify-request-transport.mjs
 python .\tools\verify-schema.py
 python .\tools\verify-migration.py
 python .\tools\verify-reset-database.py

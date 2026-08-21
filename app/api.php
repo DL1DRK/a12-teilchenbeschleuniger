@@ -535,10 +535,10 @@ function a12RestoreBackup(array $backup): array
         if ($foreignKeyProblem) {
             throw new InvalidArgumentException('Das Backup enthält ungültige Verknüpfungen zwischen Datensätzen.');
         }
-        $database->commit();
+        $database->exec('COMMIT');
     } catch (Throwable $exception) {
         if ($database->inTransaction()) {
-            $database->rollBack();
+            $database->exec('ROLLBACK');
         }
         throw $exception;
     }
@@ -620,10 +620,10 @@ function a12ResetNumbering(): array
         if ($database->query('PRAGMA foreign_key_check')->fetch()) {
             throw new RuntimeException('Die Verknüpfungsprüfung nach der Neunummerierung ist fehlgeschlagen.');
         }
-        $database->commit();
+        $database->exec('COMMIT');
     } catch (Throwable $exception) {
         if ($database->inTransaction()) {
-            $database->rollBack();
+            $database->exec('ROLLBACK');
         }
         throw $exception;
     }
@@ -652,10 +652,10 @@ function a12ResetEntireSystem(array $admin): void
         if ($database->query('PRAGMA foreign_key_check')->fetch()) {
             throw new RuntimeException('Die Verknüpfungsprüfung nach dem Zurücksetzen ist fehlgeschlagen.');
         }
-        $database->commit();
+        $database->exec('COMMIT');
     } catch (Throwable $exception) {
         if ($database->inTransaction()) {
-            $database->rollBack();
+            $database->exec('ROLLBACK');
         }
         throw $exception;
     }
@@ -702,7 +702,7 @@ try {
     if ($action === 'reset-system' && $method === 'POST') {
         a12RequireAnyRole(['admin']);
         a12RequireCsrf();
-        $input = a12ReadJson();
+        $input = a12ReadInput();
         $admin = a12VerifyAdminPasswordPair((string)($input['password'] ?? ''), (string)($input['passwordConfirm'] ?? ''));
         $mode = (string)($input['mode'] ?? '');
         if ($mode === 'numbering') {
@@ -729,7 +729,7 @@ try {
     if ($action === 'create-part' && $method === 'POST') {
         a12RequireAnyRole(['admin', 'storekeeper']);
         a12RequireCsrf();
-        $input = a12ReadJson();
+        $input = a12ReadInput();
         $name = a12Text($input['name'] ?? '', 120, true);
         $manufacturer = a12Text($input['manufacturer'] ?? '', 120);
         $category = a12Text($input['category'] ?? 'Sonstiges', 80, true);
@@ -751,10 +751,10 @@ try {
                 $movement = $database->prepare('INSERT INTO movements (part_id, part_name, type, delta, stock, actor_user_id, actor_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
                 $movement->execute([$partId, $name, 'Einlagerung', $quantity, $quantity, (int)$_SESSION['user_id'], (string)$_SESSION['username']]);
             }
-            $database->commit();
+            $database->exec('COMMIT');
         } catch (Throwable $exception) {
             if ($database->inTransaction()) {
-                $database->rollBack();
+                $database->exec('ROLLBACK');
             }
             throw $exception;
         }
@@ -763,7 +763,7 @@ try {
 
     if ($action === 'adjust-stock' && $method === 'POST') {
         a12RequireCsrf();
-        $input = a12ReadJson();
+        $input = a12ReadInput();
         $partId = filter_var($input['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $delta = filter_var($input['delta'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => -100000000, 'max_range' => 100000000]]);
         if ($partId === false || $delta === false || $delta === 0) {
@@ -788,10 +788,10 @@ try {
             $update->execute([$newStock, $partId]);
             $movement = $database->prepare('INSERT INTO movements (part_id, part_name, type, delta, stock, actor_user_id, actor_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
             $movement->execute([$partId, $part['name'], $delta > 0 ? 'Einlagerung' : 'Entnahme', $delta, $newStock, (int)$_SESSION['user_id'], (string)$_SESSION['username']]);
-            $database->commit();
+            $database->exec('COMMIT');
         } catch (Throwable $exception) {
             if ($database->inTransaction()) {
-                $database->rollBack();
+                $database->exec('ROLLBACK');
             }
             throw $exception;
         }
@@ -801,7 +801,7 @@ try {
     if ($action === 'delete-part' && $method === 'POST') {
         a12RequireAnyRole(['admin']);
         a12RequireCsrf();
-        $input = a12ReadJson();
+        $input = a12ReadInput();
         $partId = filter_var($input['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($partId === false) {
             throw new InvalidArgumentException('Ungültiges Bauteil.');
@@ -817,7 +817,7 @@ try {
     if ($action === 'create-user' && $method === 'POST') {
         a12RequireAnyRole(['admin']);
         a12RequireCsrf();
-        $input = a12ReadJson();
+        $input = a12ReadInput();
         $username = trim((string)($input['username'] ?? ''));
         $password = (string)($input['password'] ?? '');
         $role = (string)($input['role'] ?? 'member');
@@ -845,7 +845,7 @@ try {
     if ($action === 'update-user' && $method === 'POST') {
         a12RequireAnyRole(['admin']);
         a12RequireCsrf();
-        $input = a12ReadJson();
+        $input = a12ReadInput();
         $userId = filter_var($input['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $role = (string)($input['role'] ?? '');
         $active = filter_var($input['active'] ?? null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
@@ -887,6 +887,17 @@ try {
     a12Json(['error' => $exception->getMessage()], 409);
 } catch (A12NotFoundException $exception) {
     a12Json(['error' => $exception->getMessage()], 404);
+} catch (PDOException $exception) {
+    error_log('A12-Teilchenbeschleuniger database error: ' . $exception->getMessage());
+    $databaseError = strtolower($exception->getMessage());
+    if (str_contains($databaseError, 'locked') || str_contains($databaseError, 'busy')) {
+        a12Json(['error' => 'Die Datenbank ist gerade belegt. Bitte warten Sie kurz und versuchen Sie es erneut.'], 503);
+    }
+    if (str_contains($databaseError, 'readonly') || str_contains($databaseError, 'read-only')
+        || str_contains($databaseError, 'permission') || str_contains($databaseError, 'unable to open')) {
+        a12Json(['error' => 'Die SQLite-Datenbank ist für PHP nicht beschreibbar. Bitte prüfen Sie die Schreibrechte des Datenordners.'], 500);
+    }
+    a12Json(['error' => 'Die Datenbank konnte die Änderung nicht speichern.'], 500);
 } catch (Throwable $exception) {
     error_log('A12-Teilchenbeschleuniger API error: ' . $exception->getMessage());
     a12Json(['error' => 'Der Server konnte die Anfrage nicht verarbeiten.'], 500);

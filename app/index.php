@@ -51,8 +51,8 @@ if (!a12IsAuthenticated()):
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>A12-Teilchenbeschleuniger · Anmeldung</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="theme-dark-blue.css">
+  <link rel="stylesheet" href="style.css?v=<?= rawurlencode(A12_APP_VERSION) ?>">
+  <link rel="stylesheet" href="theme-dark-blue.css?v=<?= rawurlencode(A12_APP_VERSION) ?>">
 </head>
 <body class="loginPage">
   <main class="loginShell">
@@ -84,10 +84,10 @@ endif;
   <meta name="a12-role" content="<?= htmlspecialchars(a12CurrentRole(), ENT_QUOTES, 'UTF-8') ?>">
   <meta name="a12-user-id" content="<?= (int)$_SESSION['user_id'] ?>">
   <title>A12-Teilchenbeschleuniger · Bauteile</title>
-  <link rel="icon" type="image/png" sizes="128x128" href="favicon.png">
-  <link rel="apple-touch-icon" href="favicon.png">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="theme-dark-blue.css">
+  <link rel="icon" type="image/png" sizes="128x128" href="favicon.png?v=<?= rawurlencode(A12_APP_VERSION) ?>">
+  <link rel="apple-touch-icon" href="favicon.png?v=<?= rawurlencode(A12_APP_VERSION) ?>">
+  <link rel="stylesheet" href="style.css?v=<?= rawurlencode(A12_APP_VERSION) ?>">
+  <link rel="stylesheet" href="theme-dark-blue.css?v=<?= rawurlencode(A12_APP_VERSION) ?>">
 </head>
 <body>
   <aside class="sidebar">
@@ -166,6 +166,6 @@ endif;
     <dialog id="resetDialog"><form id="resetForm"><div class="dialogHead"><div><p class="eyebrow dangerEyebrow">GEFAHRENZONE</p><h2>System zurücksetzen</h2></div><button class="close" type="button" data-close-dialog="resetDialog">×</button></div><fieldset class="resetChoices"><legend>Was soll zurückgesetzt werden?</legend><label><input type="radio" name="mode" value="numbering" checked><span><strong>Nur Nummerierung zurücksetzen</strong><small>Interne IDs werden lückenlos ab 1 neu vergeben. Inhalte und Verknüpfungen bleiben erhalten.</small></span></label><label class="fullResetChoice"><input type="radio" name="mode" value="full"><span><strong>Gesamtes System zurücksetzen</strong><small>Bauteile, Bewegungen und alle weiteren Benutzer werden gelöscht. Ihr aktuelles Administratorkonto bleibt erhalten.</small></span></label></fieldset><div class="formgrid"><label>Aktuelles Passwort *<input name="password" type="password" autocomplete="current-password" required></label><label>Passwort wiederholen *<input name="password_confirm" type="password" autocomplete="current-password" required></label></div><div class="destructiveNotice"><strong>Dieser Vorgang kann nicht rückgängig gemacht werden.</strong> Erstellen Sie vorher ein Backup.</div><button class="fatalButton" id="resetConfirmBtn" type="submit">Ja, ich will löschen</button></form></dialog>
   <?php endif; ?>
   <div id="toast" role="status"></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=<?= rawurlencode(A12_APP_VERSION) ?>"></script>
 </body>
 </html>
