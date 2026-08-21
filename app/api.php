@@ -310,6 +310,361 @@ function a12PrepareUpdate(): array
     return ['url' => 'updater.php', 'version' => $version, 'sha256' => $actualDigest];
 }
 
+/** @return array<string,mixed> */
+function a12CreateBackup(): array
+{
+    $database = a12Db();
+    $data = [
+        'users' => $database->query('SELECT id, username, password_hash, role, active, created_at, last_login_at FROM users ORDER BY id')->fetchAll(),
+        'parts' => $database->query('SELECT id, name, manufacturer, category, value, drawer, quantity, minimum, datasheet, created_at, updated_at FROM parts ORDER BY id')->fetchAll(),
+        'movements' => $database->query('SELECT id, part_id, part_name, type, delta, stock, actor_user_id, actor_name, created_at FROM movements ORDER BY id')->fetchAll(),
+        'settings' => $database->query('SELECT key, value FROM settings ORDER BY key')->fetchAll(),
+    ];
+    $encodedData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    return [
+        'format' => 'a12-teilchenbeschleuniger-backup',
+        'formatVersion' => 1,
+        'applicationVersion' => A12_APP_VERSION,
+        'schemaVersion' => (int)a12Setting('schema_version', '0'),
+        'createdAt' => gmdate('c'),
+        'checksum' => 'sha256:' . hash('sha256', $encodedData),
+        'data' => $data,
+    ];
+}
+
+/** @return array<string,mixed> */
+function a12ReadUploadedBackup(): array
+{
+    $maximumBytes = 25 * 1024 * 1024;
+    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $maximumBytes + 65536) {
+        throw new InvalidArgumentException('Die Backupdatei darf höchstens 25 MB groß sein.');
+    }
+    $file = $_FILES['backup'] ?? null;
+    if (!is_array($file) || (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new InvalidArgumentException('Bitte wählen Sie eine gültige Backupdatei aus.');
+    }
+    $size = (int)($file['size'] ?? 0);
+    $temporaryName = (string)($file['tmp_name'] ?? '');
+    if ($size < 1 || $size > $maximumBytes || $temporaryName === '' || !is_uploaded_file($temporaryName)) {
+        throw new InvalidArgumentException('Die Backupdatei ist leer, zu groß oder konnte nicht sicher gelesen werden.');
+    }
+    $contents = @file_get_contents($temporaryName);
+    if ($contents === false || strlen($contents) > $maximumBytes) {
+        throw new InvalidArgumentException('Die Backupdatei konnte nicht gelesen werden.');
+    }
+    try {
+        $backup = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException) {
+        throw new InvalidArgumentException('Die Backupdatei enthält kein gültiges JSON.');
+    }
+    if (!is_array($backup)) {
+        throw new InvalidArgumentException('Die Backupdatei besitzt ein ungültiges Format.');
+    }
+    return $backup;
+}
+
+/** @return array<string,mixed> */
+function a12ValidateBackup(array $backup): array
+{
+    if (($backup['format'] ?? null) !== 'a12-teilchenbeschleuniger-backup' || ($backup['formatVersion'] ?? null) !== 1) {
+        throw new InvalidArgumentException('Diese Datei ist kein unterstütztes Backup von A12-Teilchenbeschleuniger.');
+    }
+    if (($backup['schemaVersion'] ?? null) !== 3) {
+        throw new InvalidArgumentException('Das Backup verwendet eine nicht unterstützte Datenbankversion.');
+    }
+    $data = $backup['data'] ?? null;
+    if (!is_array($data)) {
+        throw new InvalidArgumentException('Im Backup fehlen die Anwendungsdaten.');
+    }
+    foreach (['users', 'parts', 'movements', 'settings'] as $table) {
+        if (!isset($data[$table]) || !is_array($data[$table]) || !array_is_list($data[$table])) {
+            throw new InvalidArgumentException('Die Tabelle ' . $table . ' fehlt oder ist beschädigt.');
+        }
+    }
+    $encodedData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    $providedChecksum = strtolower((string)($backup['checksum'] ?? ''));
+    $expectedChecksum = 'sha256:' . hash('sha256', $encodedData);
+    if (!preg_match('/^sha256:[a-f0-9]{64}$/', $providedChecksum) || !hash_equals($expectedChecksum, $providedChecksum)) {
+        throw new InvalidArgumentException('Die Integritätsprüfung des Backups ist fehlgeschlagen.');
+    }
+    return $data;
+}
+
+/** @return array<string,mixed> */
+function a12VerifyAdminPasswordPair(string $password, string $confirmation): array
+{
+    if ($password === '' || $confirmation === '') {
+        throw new InvalidArgumentException('Das aktuelle Passwort muss zweimal eingegeben werden.');
+    }
+    if (!hash_equals($password, $confirmation)) {
+        throw new InvalidArgumentException('Die beiden Passworteingaben stimmen nicht überein.');
+    }
+    $statement = a12Db()->prepare('SELECT id, username, password_hash, role, active, created_at, last_login_at FROM users WHERE id = ?');
+    $statement->execute([(int)$_SESSION['user_id']]);
+    $admin = $statement->fetch();
+    $statement->closeCursor();
+    if (!$admin || (string)$admin['role'] !== 'admin' || (int)$admin['active'] !== 1
+        || !password_verify($password, (string)$admin['password_hash'])) {
+        throw new DomainException('Das aktuelle Administratorpasswort ist nicht korrekt.');
+    }
+    return $admin;
+}
+
+function a12BackupInteger(array $row, string $key, int $minimum, int $maximum, bool $nullable = false): ?int
+{
+    $value = $row[$key] ?? null;
+    if ($nullable && $value === null) {
+        return null;
+    }
+    if (!is_int($value) || $value < $minimum || $value > $maximum) {
+        throw new InvalidArgumentException('Das Backup enthält einen ungültigen Zahlenwert in ' . $key . '.');
+    }
+    return $value;
+}
+
+function a12BackupString(array $row, string $key, int $maximum, bool $nullable = false): ?string
+{
+    $value = $row[$key] ?? null;
+    if ($nullable && $value === null) {
+        return null;
+    }
+    if (!is_string($value) || strlen($value) > $maximum) {
+        throw new InvalidArgumentException('Das Backup enthält einen ungültigen Textwert in ' . $key . '.');
+    }
+    return $value;
+}
+
+/** @return array{loggedOut:bool} */
+function a12RestoreBackup(array $backup): array
+{
+    $data = a12ValidateBackup($backup);
+    $database = a12Db();
+    $database->exec('PRAGMA busy_timeout = 15000');
+    $currentUsername = (string)$_SESSION['username'];
+    $database->exec('BEGIN IMMEDIATE');
+    try {
+        $database->exec('DELETE FROM movements');
+        $database->exec('DELETE FROM parts');
+        $database->exec('DELETE FROM users');
+        $database->exec('DELETE FROM settings');
+        $database->exec("DELETE FROM sqlite_sequence WHERE name IN ('users','parts','movements')");
+
+        $userInsert = $database->prepare('INSERT INTO users (id, username, password_hash, role, active, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        foreach ($data['users'] as $row) {
+            if (!is_array($row)) {
+                throw new InvalidArgumentException('Das Backup enthält einen ungültigen Benutzerdatensatz.');
+            }
+            $role = a12BackupString($row, 'role', 20);
+            if (!in_array($role, ['admin', 'storekeeper', 'member'], true)) {
+                throw new InvalidArgumentException('Das Backup enthält eine ungültige Benutzerrolle.');
+            }
+            $username = a12BackupString($row, 'username', 64);
+            $passwordHash = a12BackupString($row, 'password_hash', 255);
+            if ($username === '' || $passwordHash === '' || strlen($passwordHash) < 20) {
+                throw new InvalidArgumentException('Das Backup enthält unvollständige Benutzerdaten.');
+            }
+            $userInsert->execute([
+                a12BackupInteger($row, 'id', 1, 1000000000), $username, $passwordHash, $role,
+                a12BackupInteger($row, 'active', 0, 1), a12BackupString($row, 'created_at', 40),
+                a12BackupString($row, 'last_login_at', 40, true),
+            ]);
+        }
+
+        $partInsert = $database->prepare('INSERT INTO parts (id, name, manufacturer, category, value, drawer, quantity, minimum, datasheet, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        foreach ($data['parts'] as $row) {
+            if (!is_array($row)) {
+                throw new InvalidArgumentException('Das Backup enthält einen ungültigen Bauteildatensatz.');
+            }
+            $name = a12BackupString($row, 'name', 120);
+            $category = a12BackupString($row, 'category', 80);
+            $drawer = a12BackupString($row, 'drawer', 40);
+            if ($name === '' || $category === '' || $drawer === '') {
+                throw new InvalidArgumentException('Das Backup enthält unvollständige Bauteildaten.');
+            }
+            $partInsert->execute([
+                a12BackupInteger($row, 'id', 1, 1000000000), $name,
+                a12BackupString($row, 'manufacturer', 120), $category,
+                a12BackupString($row, 'value', 160), $drawer,
+                a12BackupInteger($row, 'quantity', 0, 100000000),
+                a12BackupInteger($row, 'minimum', 0, 100000000),
+                a12BackupString($row, 'datasheet', 2048, true),
+                a12BackupString($row, 'created_at', 40), a12BackupString($row, 'updated_at', 40),
+            ]);
+        }
+
+        $movementInsert = $database->prepare('INSERT INTO movements (id, part_id, part_name, type, delta, stock, actor_user_id, actor_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        foreach ($data['movements'] as $row) {
+            if (!is_array($row)) {
+                throw new InvalidArgumentException('Das Backup enthält einen ungültigen Bewegungsdatensatz.');
+            }
+            $type = a12BackupString($row, 'type', 20);
+            if (!in_array($type, ['Einlagerung', 'Entnahme', 'Korrektur'], true)) {
+                throw new InvalidArgumentException('Das Backup enthält einen ungültigen Bewegungstyp.');
+            }
+            $movementInsert->execute([
+                a12BackupInteger($row, 'id', 1, 1000000000),
+                a12BackupInteger($row, 'part_id', 1, 1000000000, true),
+                a12BackupString($row, 'part_name', 120), $type,
+                a12BackupInteger($row, 'delta', -100000000, 100000000),
+                a12BackupInteger($row, 'stock', 0, 100000000),
+                a12BackupInteger($row, 'actor_user_id', 1, 1000000000, true),
+                a12BackupString($row, 'actor_name', 64), a12BackupString($row, 'created_at', 40),
+            ]);
+        }
+
+        $settingInsert = $database->prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+        foreach ($data['settings'] as $row) {
+            if (!is_array($row)) {
+                throw new InvalidArgumentException('Das Backup enthält einen ungültigen Einstellungsdatensatz.');
+            }
+            $key = a12BackupString($row, 'key', 100);
+            if ($key === '') {
+                throw new InvalidArgumentException('Das Backup enthält einen leeren Einstellungsschlüssel.');
+            }
+            $settingInsert->execute([$key, a12BackupString($row, 'value', 100000)]);
+        }
+        if ((int)$database->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1")->fetchColumn() < 1) {
+            throw new InvalidArgumentException('Das Backup enthält keinen aktiven Administrator.');
+        }
+        if (a12Setting('schema_version', '') !== '3') {
+            throw new InvalidArgumentException('Im Backup fehlt die gültige Datenbankversion.');
+        }
+        a12SetSetting('update_cache', '');
+        a12SetSetting('update_checked_at', '0');
+        $foreignKeyProblem = $database->query('PRAGMA foreign_key_check')->fetch();
+        if ($foreignKeyProblem) {
+            throw new InvalidArgumentException('Das Backup enthält ungültige Verknüpfungen zwischen Datensätzen.');
+        }
+        $database->commit();
+    } catch (Throwable $exception) {
+        if ($database->inTransaction()) {
+            $database->rollBack();
+        }
+        throw $exception;
+    }
+
+    $statement = $database->prepare("SELECT id, username, role, active FROM users WHERE username = ? COLLATE NOCASE AND role = 'admin' AND active = 1");
+    $statement->execute([$currentUsername]);
+    $restoredAdmin = $statement->fetch();
+    $statement->closeCursor();
+    if ($restoredAdmin) {
+        $_SESSION['user_id'] = (int)$restoredAdmin['id'];
+        $_SESSION['username'] = (string)$restoredAdmin['username'];
+        $_SESSION['role'] = 'admin';
+        session_regenerate_id(true);
+        return ['loggedOut' => false];
+    }
+    $_SESSION = [];
+    session_destroy();
+    return ['loggedOut' => true];
+}
+
+/** @return array{users:int,parts:int,movements:int} */
+function a12ResetNumbering(): array
+{
+    $database = a12Db();
+    $database->exec('PRAGMA busy_timeout = 15000');
+    $users = $database->query('SELECT id FROM users ORDER BY id')->fetchAll();
+    $parts = $database->query('SELECT id FROM parts ORDER BY id')->fetchAll();
+    $movements = $database->query('SELECT id, part_id, actor_user_id FROM movements ORDER BY id')->fetchAll();
+    $userMap = [];
+    foreach ($users as $index => $row) {
+        $userMap[(int)$row['id']] = $index + 1;
+    }
+    $partMap = [];
+    foreach ($parts as $index => $row) {
+        $partMap[(int)$row['id']] = $index + 1;
+    }
+    $movementMap = [];
+    foreach ($movements as $index => $row) {
+        $movementMap[(int)$row['id']] = $index + 1;
+    }
+    $newCurrentUserId = $userMap[(int)$_SESSION['user_id']] ?? null;
+    if ($newCurrentUserId === null) {
+        throw new DomainException('Das aktuelle Administratorkonto konnte nicht neu nummeriert werden.');
+    }
+
+    $database->exec('BEGIN IMMEDIATE');
+    try {
+        $database->exec('UPDATE movements SET part_id = NULL, actor_user_id = NULL');
+        $database->exec('UPDATE movements SET id = -id');
+        $database->exec('UPDATE parts SET id = -id');
+        $database->exec('UPDATE users SET id = -id');
+        $updateUser = $database->prepare('UPDATE users SET id = ? WHERE id = ?');
+        foreach ($userMap as $oldId => $newId) {
+            $updateUser->execute([$newId, -$oldId]);
+        }
+        $updatePart = $database->prepare('UPDATE parts SET id = ? WHERE id = ?');
+        foreach ($partMap as $oldId => $newId) {
+            $updatePart->execute([$newId, -$oldId]);
+        }
+        $updateMovement = $database->prepare('UPDATE movements SET id = ?, part_id = ?, actor_user_id = ? WHERE id = ?');
+        foreach ($movements as $row) {
+            $oldId = (int)$row['id'];
+            $oldPartId = $row['part_id'] === null ? null : (int)$row['part_id'];
+            $oldActorId = $row['actor_user_id'] === null ? null : (int)$row['actor_user_id'];
+            $updateMovement->execute([
+                $movementMap[$oldId],
+                $oldPartId === null ? null : ($partMap[$oldPartId] ?? null),
+                $oldActorId === null ? null : ($userMap[$oldActorId] ?? null),
+                -$oldId,
+            ]);
+        }
+        $database->exec("DELETE FROM sqlite_sequence WHERE name IN ('users','parts','movements')");
+        $sequenceInsert = $database->prepare('INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)');
+        foreach ([['users', count($users)], ['parts', count($parts)], ['movements', count($movements)]] as [$name, $sequence]) {
+            if ($sequence > 0) {
+                $sequenceInsert->execute([$name, $sequence]);
+            }
+        }
+        if ($database->query('PRAGMA foreign_key_check')->fetch()) {
+            throw new RuntimeException('Die Verknüpfungsprüfung nach der Neunummerierung ist fehlgeschlagen.');
+        }
+        $database->commit();
+    } catch (Throwable $exception) {
+        if ($database->inTransaction()) {
+            $database->rollBack();
+        }
+        throw $exception;
+    }
+    $_SESSION['user_id'] = $newCurrentUserId;
+    session_regenerate_id(true);
+    return ['users' => count($users), 'parts' => count($parts), 'movements' => count($movements)];
+}
+
+function a12ResetEntireSystem(array $admin): void
+{
+    $database = a12Db();
+    $database->exec('PRAGMA busy_timeout = 15000');
+    $database->exec('BEGIN IMMEDIATE');
+    try {
+        $database->exec('DELETE FROM movements');
+        $database->exec('DELETE FROM parts');
+        $database->exec('DELETE FROM users');
+        $database->exec("DELETE FROM sqlite_sequence WHERE name IN ('users','parts','movements')");
+        $statement = $database->prepare('INSERT INTO users (id, username, password_hash, role, active, created_at, last_login_at) VALUES (1, ?, ?, ?, 1, ?, ?)');
+        $statement->execute([
+            (string)$admin['username'], (string)$admin['password_hash'], 'admin',
+            (string)$admin['created_at'], $admin['last_login_at'] === null ? null : (string)$admin['last_login_at'],
+        ]);
+        a12SetSetting('update_cache', '');
+        a12SetSetting('update_checked_at', '0');
+        if ($database->query('PRAGMA foreign_key_check')->fetch()) {
+            throw new RuntimeException('Die Verknüpfungsprüfung nach dem Zurücksetzen ist fehlgeschlagen.');
+        }
+        $database->commit();
+    } catch (Throwable $exception) {
+        if ($database->inTransaction()) {
+            $database->rollBack();
+        }
+        throw $exception;
+    }
+    $_SESSION['user_id'] = 1;
+    $_SESSION['username'] = (string)$admin['username'];
+    $_SESSION['role'] = 'admin';
+    session_regenerate_id(true);
+}
+
 try {
     if ($action === 'snapshot' && $method === 'GET') {
         a12Json(a12SnapshotForCurrentUser());
@@ -324,6 +679,41 @@ try {
         a12RequireAnyRole(['admin']);
         a12RequireCsrf();
         a12Json(a12PrepareUpdate());
+    }
+
+    if ($action === 'backup' && $method === 'GET') {
+        a12RequireAnyRole(['admin']);
+        $backup = a12CreateBackup();
+        header('Cache-Control: no-store, max-age=0');
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="a12-vollbackup-' . gmdate('Y-m-d-His') . '.json"');
+        echo json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        exit;
+    }
+
+    if ($action === 'restore-backup' && $method === 'POST') {
+        a12RequireAnyRole(['admin']);
+        a12RequireCsrf();
+        a12VerifyAdminPasswordPair((string)($_POST['password'] ?? ''), (string)($_POST['password_confirm'] ?? ''));
+        $result = a12RestoreBackup(a12ReadUploadedBackup());
+        a12Json(['ok' => true, 'loggedOut' => $result['loggedOut']]);
+    }
+
+    if ($action === 'reset-system' && $method === 'POST') {
+        a12RequireAnyRole(['admin']);
+        a12RequireCsrf();
+        $input = a12ReadJson();
+        $admin = a12VerifyAdminPasswordPair((string)($input['password'] ?? ''), (string)($input['passwordConfirm'] ?? ''));
+        $mode = (string)($input['mode'] ?? '');
+        if ($mode === 'numbering') {
+            $counts = a12ResetNumbering();
+            a12Json(['ok' => true, 'mode' => $mode, 'counts' => $counts, 'snapshot' => a12SnapshotForCurrentUser()]);
+        }
+        if ($mode === 'full') {
+            a12ResetEntireSystem($admin);
+            a12Json(['ok' => true, 'mode' => $mode, 'snapshot' => a12SnapshotForCurrentUser()]);
+        }
+        throw new InvalidArgumentException('Bitte wählen Sie eine gültige Reset-Art.');
     }
 
     if ($action === 'export' && $method === 'GET') {

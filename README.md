@@ -14,6 +14,8 @@ Eine schlanke, selbst gehostete Bauteil- und Lagerbestandsverwaltung für den Ap
 - Rollen für Administrator, Lagerist und Mitglied
 - DARC-Blau, responsive Oberfläche und Dark-Mode
 - JSON-Export für Sicherungen und Weiterverarbeitung
+- Vollbackup und geprüfte Wiederherstellung im Admin-Bereich
+- Abgesicherter Reset der internen Nummerierung oder des gesamten Systems
 - Hintergrundprüfung auf neue GitHub-Releases im Admin-Bereich
 - Ein-Datei-Installer und Ein-Datei-Updater
 
@@ -60,6 +62,10 @@ Ist der Webordner für PHP nicht beschreibbar oder blockiert das Hosting den Dow
 ## Datensicherung und Sicherheit
 
 - Das Download-Symbol in der Bestandsansicht erzeugt einen vollständigen JSON-Export.
+- Unter **System → Backup & Wiederherstellung** können Administratoren ein vollständiges Backup mit Bauteilen, Bewegungen, Benutzerkonten, Passwort-Hashes und Einstellungen herunterladen oder einspielen.
+- Die Wiederherstellung prüft Dateiformat und SHA-256-Integrität und verlangt das aktuelle Administratorpasswort zweimal.
+- In der **Gefahrenzone** kann die interne Nummerierung lückenlos neu aufgebaut oder das System geleert werden. Der vollständige Reset behält nur das aktuell angemeldete Administratorkonto und die Installationseinstellungen.
+- Reset-Vorgänge erfordern ebenfalls die doppelte Passworteingabe und die ausdrückliche Schaltfläche **Ja, ich will löschen**.
 - Sichern Sie zusätzlich regelmäßig den vom Installer angezeigten privaten Datenordner.
 - Sessions, Passwort-Hashing, CSRF-Schutz und transaktionale Bestandsänderungen sind integriert.
 - Das Bewegungsjournal bleibt auch nach dem Löschen eines Bauteils erhalten.
@@ -75,8 +81,10 @@ node .\tools\build-updater.mjs
 node .\tools\verify-versions.mjs
 node .\tools\verify-installer.mjs
 node .\tools\verify-updater.mjs
+node .\tools\verify-admin-maintenance.mjs
 python .\tools\verify-schema.py
 python .\tools\verify-migration.py
+python .\tools\verify-reset-database.py
 ```
 
 Eine neue Versionsnummer auf `main` startet den Release-Workflow. Er prüft das Projekt, erstellt den passenden Tag, baut `installer.php` und `updater.php` und hängt beide Dateien an ein GitHub-Release. Existiert das Release bereits, bleibt ein normaler Commit ohne neue Veröffentlichung. Details stehen in [CONTRIBUTING.md](CONTRIBUTING.md) und [CHANGELOG.md](CHANGELOG.md).

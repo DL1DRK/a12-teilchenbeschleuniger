@@ -2,6 +2,20 @@
 
 Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Datei dokumentiert. Die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## [2.4.0] - 2026-08-21
+
+### Hinzugefügt
+
+- Vollständiges JSON-Backup einschließlich Bauteilen, Bewegungen, Benutzern, Passwort-Hashes und Systemeinstellungen
+- Geprüfte Backup-Wiederherstellung mit Integritätsprüfung und zweifacher Administratorpasswort-Bestätigung
+- Gefahrenzone zum lückenlosen Neuaufbau interner Nummerierungen oder zum vollständigen System-Reset
+- Besonders hervorgehobene endgültige Bestätigung **Ja, ich will löschen**
+
+### Sicherheit
+
+- Reset und Wiederherstellung sind ausschließlich für Administratoren mit gültigem CSRF-Token und doppelt eingegebenem aktuellem Passwort möglich
+- Ein vollständiger Reset behält das angemeldete Administratorkonto und die Installationseinstellungen bei
+
 ## [2.3.3] - 2026-08-20
 
 ### Geändert
@@ -85,6 +99,7 @@ Alle wesentlichen Änderungen an A12-Teilchenbeschleuniger werden in dieser Date
 
 - Erster lokaler Oberflächenprototyp für die Bauteilverwaltung
 
+[2.4.0]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.4.0
 [2.3.3]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.3
 [2.3.2]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.2
 [2.3.1]: https://github.com/DL1DRK/a12-teilchenbeschleuniger/releases/tag/v2.3.1

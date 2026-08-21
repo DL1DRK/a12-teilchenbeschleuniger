@@ -26,6 +26,15 @@ async function request(action,{method='GET',body,query={}}={}){
   return payload;
 }
 
+async function requestForm(action,formData){
+  const response=await fetch(`api.php?${new URLSearchParams({action})}`,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json','X-CSRF-Token':csrf},body:formData});
+  let payload;
+  try{payload=await response.json()}catch{payload={error:'Der Server hat eine ungültige Antwort geliefert.'}}
+  if(response.status===401){location.reload();throw new Error('Die Sitzung ist abgelaufen.')}
+  if(!response.ok)throw new Error(payload.error||'Die Anfrage ist fehlgeschlagen.');
+  return payload;
+}
+
 function useSnapshot(snapshot){
   parts=Array.isArray(snapshot.parts)?snapshot.parts:[];
   movements=Array.isArray(snapshot.movements)?snapshot.movements:[];
@@ -248,6 +257,42 @@ if($('#userForm'))$('#userForm').elements.role.addEventListener('change',updateR
 if($('#checkUpdateBtn'))$('#checkUpdateBtn').addEventListener('click',()=>checkUpdates(true));
 if($('#prepareUpdateBtn'))$('#prepareUpdateBtn').addEventListener('click',prepareUpdate);
 if($('[data-open-system]'))$('[data-open-system]').addEventListener('click',()=>document.querySelector('.nav[data-view="system"]').click());
+if($('#backupBtn'))$('#backupBtn').addEventListener('click',()=>{location.href='api.php?action=backup'});
+if($('#restoreOpenBtn'))$('#restoreOpenBtn').addEventListener('click',()=>{$('#restoreForm').reset();$('#restoreDialog').showModal()});
+if($('#resetOpenBtn'))$('#resetOpenBtn').addEventListener('click',()=>{$('#resetForm').reset();$('#resetDialog').showModal()});
+
+if($('#restoreForm'))$('#restoreForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.currentTarget;
+  const data=new FormData(form);
+  if(data.get('password')!==data.get('password_confirm')){toast('Die beiden Passworteingaben stimmen nicht überein.',true);return}
+  const button=$('#restoreBtn');
+  const label=button.textContent;
+  button.disabled=true;
+  button.textContent='Backup wird geprüft …';
+  try{
+    const result=await requestForm('restore-backup',data);
+    $('#restoreDialog').close();
+    if(result.loggedOut){location.href='index.php';return}
+    location.reload();
+  }catch(error){toast(error.message,true);button.disabled=false;button.textContent=label}
+});
+
+if($('#resetForm'))$('#resetForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.currentTarget;
+  const data=new FormData(form);
+  if(data.get('password')!==data.get('password_confirm')){toast('Die beiden Passworteingaben stimmen nicht überein.',true);return}
+  const button=$('#resetConfirmBtn');
+  const label=button.textContent;
+  button.disabled=true;
+  button.textContent='System wird zurückgesetzt …';
+  try{
+    await request('reset-system',{method:'POST',body:{mode:data.get('mode'),password:data.get('password'),passwordConfirm:data.get('password_confirm')}});
+    $('#resetDialog').close();
+    location.reload();
+  }catch(error){toast(error.message,true);button.disabled=false;button.textContent=label}
+});
 
 $('#partForm').addEventListener('submit',async event=>{
   event.preventDefault();
